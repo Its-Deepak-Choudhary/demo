@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Schedule For Entry</title>
+  <style>
+    body { font-family: Arial; margin: 30px; }
+    label { display: block; margin-top: 15px; }
+    input, select { padding: 5px; width: 200px; margin-top: 5px; }
+    .district-container { margin-top: 15px; }
+    .district-checkboxes { margin-left: 15px; }
+    .input-fields { margin-left: 30px; margin-top: 10px; }
+    .district-block {
+      border: 1px solid #ccc; padding: 10px; margin-top: 10px;
+      background: #f9f9f9; position: relative;
+    }
+    .remove-btn {
+      position: absolute; right: 10px; top: 10px;
+      background-color: #e74c3c; color: white;
+      border: none; padding: 4px 8px; cursor: pointer;
+    }
+    button#submit-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #2ecc71;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Schedule For Entry</h2>
+
+  <label for="schedule-date">Schedule Date:</label>
+  <input type="date" id="schedule-date">
+
+  <label for="hq-manager">HQ Manager:</label>
+ <select id="hq-manager">
+    <option value="">-- Select Manager --</option>
+    <option value="Rohit Kumar">Rohit Kumar</option>
+    <option value="Dharmendra Kumar">Dharmendra Kumar</option>
+    <option value="Shalu Kumari">Shalu Kumari</option>
+    <option value="Rahul Kumar">Rahul Kumar</option>
+    <option value="Vishwanath Singh">Vishwanath Singh</option>
+    <option value="Ritesh Kumar Rohit">Ritesh Kumar Rohit</option>
+    <option value="Markandey Shahi">Markandey Shahi</option>
+  </select>
+
+  <div id="district-section" class="district-container"></div>
+
+  <button id="submit-btn">Submit</button>
+
+  <script>
+    const managerDistricts = {
+    "Rohit Kumar": ["Nalanda", "Banka", "Bhagalpur", "Jamui", "Khagaria", "Munger"],
+    "Dharmendra Kumar": ["Arwal", "Aurangabad", "Gaya", "Jehanabad", "Sitamarhi", "Sheohar", "Vaishali"],
+    "Shalu Kumari": ["Begusarai", "Katihar", "Kishanganj", "Araria", "Nawada", "Purnia"],
+    "Rahul Kumar": ["Bhojpur", "Buxar", "Kaimur", "Patna", "Rohtas", "Samastipur"],
+    "Vishwanath Singh": ["Darbhanga", "East Champaran", "Madhubani", "West Champaran"],
+    "Ritesh Kumar Rohit": ["Gopalganj", "Muzaffarpur", "Saran", "Siwan"],
+    "Markandey Shahi": ["Lakhisarai", "Madhepura", "Saharsa", "Sheikhpura", "Supaul"]
+    };
+
+    const hqManagerSelect = document.getElementById('hq-manager');
+    const districtSection = document.getElementById('district-section');
+    const selectedDistricts = {};
+
+    hqManagerSelect.addEventListener('change', function () {
+      districtSection.innerHTML = '';
+      Object.keys(selectedDistricts).forEach(key => delete selectedDistricts[key]);
+
+      const selectedManager = this.value;
+      if (selectedManager && managerDistricts[selectedManager]) {
+        const list = managerDistricts[selectedManager];
+        const container = document.createElement('div');
+        container.classList.add('district-checkboxes');
+
+        list.forEach(district => {
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = district;
+          checkbox.name = 'district';
+          checkbox.value = district;
+
+          checkbox.addEventListener('change', function () {
+            if (this.checked) addDistrictInputs(district);
+            else removeDistrictInputs(district);
+          });
+
+          const label = document.createElement('label');
+          label.htmlFor = district;
+          label.textContent = district;
+          label.prepend(checkbox);
+          container.appendChild(label);
+        });
+
+        districtSection.appendChild(container);
+      }
+    });
+
+    function addDistrictInputs(district) {
+      if (selectedDistricts[district]) return;
+
+      const block = document.createElement('div');
+      block.className = 'district-block';
+      block.id = `block-${district}`;
+
+      const title = document.createElement('strong');
+      title.textContent = district;
+      block.appendChild(title);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = 'Remove';
+      removeBtn.onclick = () => {
+        document.getElementById(district).checked = false;
+        removeDistrictInputs(district);
+      };
+      block.appendChild(removeBtn);
+
+      const inputDiv = document.createElement('div');
+      inputDiv.className = 'input-fields';
+
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.placeholder = 'Enter Name';
+
+      const phoneInput = document.createElement('input');
+      phoneInput.type = 'tel';
+      phoneInput.placeholder = '10-digit Mobile';
+      phoneInput.pattern = '[0-9]{10}';
+      phoneInput.maxLength = 10;
+
+      inputDiv.appendChild(nameInput);
+      inputDiv.appendChild(document.createElement('br'));
+      inputDiv.appendChild(phoneInput);
+
+      block.appendChild(inputDiv);
+      districtSection.appendChild(block);
+
+      selectedDistricts[district] = true;
+    }
+
+    function removeDistrictInputs(district) {
+      const block = document.getElementById(`block-${district}`);
+      if (block) block.remove();
+      delete selectedDistricts[district];
+    }
+
+    document.getElementById('submit-btn').addEventListener('click', sendDataToSheet);
+
+    function sendDataToSheet() {
+      const manager = document.getElementById('hq-manager').value;
+      const scheduleDate = document.getElementById('schedule-date').value;
+      const entries = [];
+
+      Object.keys(selectedDistricts).forEach(district => {
+        const block = document.getElementById(`block-${district}`);
+        if (block) {
+          const inputs = block.querySelectorAll('input');
+          const name = inputs[0].value.trim();
+          const phone = inputs[1].value.trim();
+
+          if (name && /^[0-9]{10}$/.test(phone)) {
+            entries.push({ district, name, phone });
+          }
+        }
+      });
+
+      if (!manager || !scheduleDate || entries.length === 0) {
+        alert("Please fill all required fields correctly.");
+        return;
+      }
+
+      const payload = {
+        manager: manager,
+        schedule_date: scheduleDate,
+        entries: entries
+      };
+    
+      fetch("https://script.google.com/macros/s/AKfycbyyMFbti5PBykYTMrWqzt_0HqkZU6phSJVqbgUCs0K2eerIgoZjCuLgLXmTBaafxoo9/exec", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+        .then(res => res.json())
+        .then(res => alert(res.message))
+        .catch(err => alert("Error: " + err));
+    }
+  </script>
+
+</body>
+</html>
